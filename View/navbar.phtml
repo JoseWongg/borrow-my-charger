@@ -1,0 +1,464 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+    <div class="container-fluid  d-inline-block float-none">
+        <div style="display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px;">
+            <a class="navbar-brand" href="index.php">
+                <img src="Images/Logo2.png" alt="Borrow My Charger Logo"  style="height:60px; margin-bottom:15px; margin-left: 15px; display:inline-block;">
+                <strong><h1 style="color: rgb(0, 51, 0);display:inline-block;">Borrow My Charger</h1></strong>
+            </a>
+        </div>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 text-center">
+
+                <?php
+                //If user logged in
+                if (isset($_SESSION["login"]))
+                {
+                    $userDataSet = new UserDataSet();
+                    $chargePointDataSet = new ChargePointDataSet();
+                    $chargePointData = $chargePointDataSet->fetchChargePointByUserId($_SESSION['uid']);
+                    $userData = $userDataSet->fetchUserById($_SESSION['uid']);
+                    $username=$userData[0]->getRealname();
+
+
+
+                    echo'<li class="nav-item" style="padding-right: 10px; padding-left: 30px;">
+                            <button class="btn btn-outline-success"><a href="index.php"  style="text-decoration: none; color: green; ">Home</a></button>
+                        </li>';
+
+
+                    echo ' 
+                        <!--search charger navbar elements-->
+                       <li class="nav-item">
+                            <div class="position-relative">
+                                <form class="d-flex" method="post">
+                                    <div class="input-group" >
+                                        <input class="form-control me-2" id="searchField" name="searchField" type="search" placeholder="Search City or Postcode" aria-label="Search">
+                                    </div>
+                                    
+                                    <div>
+                                        <button id="searchChargerButton" class="btn btn-outline-success" type="submit">Search</button>
+                                    </div>
+                                </form>              
+                                
+                                <!--Live search display list of suggestions-->
+                                <div id="searchSuggestions" class="position-absolute w-100" style="top: 100%; left: 0; z-index: 1000; background-color: #fff; padding-left: 12px;"></div>
+                            </div>
+                       </li>';
+
+
+                    echo'<div>
+                                        <button id="searchChargerButton2" class="btn btn-outline-success" type="submit">Search</button>
+                            </div>';
+
+
+
+                    //If user has a chargePoint
+                    if($chargePointData!=null)
+                    {
+                        echo'
+                        <!-- Displays myCharger modal (code below) -->
+                       <li class="nav-item">
+                            <div style="padding-left: 50px;">
+                                <input class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#myChargerDetails" name="myCharger" value="View My Charger">
+                            </div>
+                       </li>
+                     
+                        <!-- Displays editCharger modal (code below) -->
+                       <li class="nav-item">
+                            <div style="padding-left: 30px; padding-right: 30px;">
+                                
+                                <input class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#editCharger" name="editCharger" value="Edit My Charger">
+                             </div>
+                        </li>    
+                        
+                       
+                       ';
+                    }
+
+
+                    //If user does not have a chargePoint
+                    if($chargePointData==null)
+                    {
+                        echo'
+                     
+                       <li class="nav-item">
+                            <!-- Button displays the addCharger modal -->
+                            <div style="padding-left: 50px; padding-right: 30px;"> 
+                                <input class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addCharger" name="addCharger" value="Add Charger">
+                            </div>
+                        </li>    
+                       ';
+                    }
+
+
+
+                    //show chargers list button
+                    echo' 
+                       <li class="nav-item">
+                            <form method="post" action="" class="form text-primary">
+                                <div>
+                                    <input id="showListButton" class="btn btn-outline-success" type="submit" name="chargerLister" value="View List">
+                                </div>
+                                    
+                            </form> 
+                       </li>
+                        ';
+
+
+                    //show map button
+                    echo' 
+                       <li class="nav-item">
+                            <form method="post" action="" class="form text-primary">
+                                <div>
+                                    <input id="showMapButton" class="btn btn-outline-success" type="submit" name="map" value="View Map">
+                                </div>
+                            </form> 
+                       </li>
+                        ';
+
+
+                    //Logout navbar button
+                    echo' 
+                       <li class="nav-item">
+                            <form method="post" action="" class="form text-primary">
+                                <div style="padding-left: 50px;">
+                                    <input class="btn btn-outline-success" type="submit" name="logoutButton" value="Logout">
+                                </div>
+                                
+                            </form> 
+                       </li>
+                        ';
+                }
+
+                ?>
+
+                <!--If user not logged in-->
+                <?php
+                if (!isset($_SESSION["login"]))
+                {
+                    echo '
+
+                        <li class="nav-item" style="padding-right: 10px; padding-left: 100px;">
+                            <button class="btn btn-outline-primary">
+                            <a href="index.php" class="text-decoration-none text-black">Home</a>
+                            </button>
+                        </li>
+
+                        <li class="nav-item" style="padding-right: 10px;">
+                            <!-- Button displays the login modal -->
+                             <button class="btn btn-outline-primary">
+                                <a class="text-decoration-none text-black" aria-current="page" href="loginController.php" data-bs-toggle="modal" data-bs-target="#exampleModal">Login</a>
+                             </button>
+                        </li>     
+                        
+                        <li class="nav-item">         
+                            <button class="btn btn-outline-primary">
+                            <a href="registrationController.php" class="text-decoration-none text-black">Register</a>
+                            </button>
+                        </li>
+                        ';
+                }
+                ?>
+            </ul>
+
+        </div>
+
+        <?php
+        //Displays logged-in username in navbar
+        if (isset($_SESSION["login"]))
+        {
+            $userDataSet = new UserDataSet();
+            $userData = $userDataSet->fetchUserById($_SESSION['uid']);
+            $username=$userData[0]->getRealname();
+            $userPhoto=$userData[0]->getProfilephoto();
+
+            echo '<div id="profilePicture" style="float: right; margin-top: 20px; margin-right: 30px;">
+                            <div>Hello: ' . $username . '<img src="' . $userPhoto . '"   style="vertical-align: middle; margin-left: 10px" width="20px"></div>
+            </div>';
+        }
+        ?>
+    </div>
+</nav>
+
+<!-- Bootstrap Modal myCharger/ pop up box-->
+<div class="modal fade" id="myChargerDetails" tabindex="-1" aria-labelledby="myChargerDetails" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">My ChargerDetails</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <?php
+                if($chargePointData != null)
+                {
+                    echo "      
+                            <div class='row'>Address 1: " .$chargePointData[0]->getAddress1()."</div>
+                            <div class='row'>Address 2: " .$chargePointData[0]->getAddress2()."</div>
+                            <div class='row'>Postcode: " .$chargePointData[0]->getPostcode()."</div>
+                            <div class='row'>Latitude: " .$chargePointData[0]->getLat()."</div>
+                            <div class='row'>Longitude: " .$chargePointData[0]->getLng()."</div>
+                            <div class='row'>Cost kW/h: " .$chargePointData[0]->getCost()."</div>
+                            ";
+                }else
+                {
+                    echo 'This user does not have a charger';
+                }
+                ?>
+            </div>
+
+            <div class="modal-footer">
+
+            </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Bootstrap Modal addCharger/ pop up box-->
+<div class="modal fade" id="addCharger" tabindex="-1" aria-labelledby="addCharger" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Add Charger</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+
+            <div class="modal-body">
+                <form method="post" action="" class="form text-primary">
+
+                    <label for="address1">Address 1</label>
+                    <input class="row" type="text" name="address1">
+
+                    <label for="address2">Address 2</label>
+                    <input class="row" type="text" name="address2">
+
+                    <label for="postcode">Postcode</label>
+                    <input class="row" type="text" name="postcode">
+
+                    <label for="lat">Latitude</label>
+                    <input class="row" type="text" name="lat">
+
+                    <label for="long">Longitude</label>
+                    <input class="row" type="text" name="lng">
+
+                    <label for="cost">cost kWh</label>
+                    <input class="row" type="text" name="cost">
+
+            </div>
+            <div class="modal-footer">
+                <input type="submit" class="btn btn-primary" name="addCharger" value="Add Charger">
+            </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+
+<!-- Bootstrap Modal editCharger/ pop up box-->
+<div class="modal fade" id="editCharger" tabindex="-1" aria-labelledby="editCharger" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Edit Charger</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+
+            <div class="modal-body">
+                <form method="post" action="" class="form text-primary">
+
+                    <label for="address1">Address 1</label>
+                    <input class="row" type="text" name="address1">
+
+                    <label for="address2">Address 2</label>
+                    <input class="row" type="text" name="address2">
+
+                    <label for="postcode">Postcode</label>
+                    <input class="row" type="text" name="postcode">
+
+                    <label for="lat">Latitude</label>
+                    <input class="row" type="text" name="lat">
+
+                    <label for="long">Longitude</label>
+                    <input class="row" type="text" name="lng">
+
+                    <label for="cost">cost kWh</label>
+                    <input class="row" type="text" name="cost">
+
+            </div>
+            <div class="modal-footer">
+                <input type="submit" class="btn btn-primary" name="editCharger" value="Edit Charger">
+            </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+<!--ChargeLister search functionality-->
+<script>
+    // Define the function to handle the AJAX response
+    function handleResponse(response, searchTerm)
+
+    {
+        // Get the search suggestions list element
+        const searchSuggestions = document.getElementById("searchSuggestions");
+
+        if(response==="No suggestions")
+        {
+            searchSuggestions.innerHTML = "";
+        }else
+            {
+                // Clear any existing search suggestions
+                searchSuggestions.innerHTML = "";
+
+                // Iterate through the results and add each one as a new list item
+                for (let i = 0; i < response.length; i++)
+                {
+                    const suggestion = response[i];
+                    //console.log(suggestion);
+                    //console.log(searchTerm);
+                    const listItem = document.createElement("li");
+
+                    let textNode ="";
+
+                    var address2=suggestion.address2;
+                    var postcode=suggestion.postcode;
+
+                    if (address2!=null)
+                    {
+                        address2=address2.replace(",", " ");
+                    }
+
+                    if (postcode!=null)
+                    {
+                        postcode=postcode.toString().replace(",", " ");
+                    }
+
+
+                    //Generates a list of matching city or postcode to suggest
+                    //if city name matches the search term
+                    if(address2.toLowerCase().startsWith(searchTerm.toLowerCase()))
+                    {
+                        if(postcode!=null)
+                        {
+                            textNode=document.createTextNode(address2+", "+postcode);
+                            //console.log(matches);
+                        }else
+                        {
+                            textNode=document.createTextNode(address2);
+                        }
+                    }else//if city address doesn't match the search term
+                    {
+                        if(address2!=null)
+                        {
+                            textNode=document.createTextNode(postcode+", "+address2);
+                            //console.log(matches);
+                        }else
+                        {
+                            textNode=document.createTextNode(postcode);
+                        }
+                    }
+                    listItem.appendChild(textNode);
+                    searchSuggestions.appendChild(listItem);
+
+                    //Search text changes to matching term in user selected option when user clicks a list item
+                    listItem.addEventListener("click", function()
+                    {
+                        var matches2= this.innerText.split(",");
+                        var searchField=document.getElementById('searchField');
+                        searchField.value = matches2[0].toString();
+                        searchSuggestions.innerHTML = "";
+                    });
+
+                    // list element background changes to grey on mouse hover
+                    listItem.addEventListener("mouseover", function()
+                    {
+                        this.style.backgroundColor = "lightgray";
+                    });
+                    listItem.addEventListener("mouseout", function()
+                    {
+                        this.style.backgroundColor = "";
+                    });
+                 }
+            }
+    }
+
+
+    // Handles the keyup event on the search field
+    function handleKeyUp(event)
+    {
+        // Get the search term from the search field
+        const searchTerm = event.target.value;
+
+        //Only produce suggestions if the search term is larger than 2 characters
+        if(searchTerm.length<3)
+        {
+            handleResponse("No suggestions","");
+        }else
+        {
+            // Create a new AJAX httpRequest
+            const httpRequest = new XMLHttpRequest();
+
+            // Define the callback function for the AJAX request
+            httpRequest.onreadystatechange = function()
+            {
+                //if request is complete and the response is available.
+                if (httpRequest.readyState === 4)
+                {
+                    //if response is successful (no error codes)
+                    if (httpRequest.status === 200)
+                    {
+                        // If the request was successful, handle the response
+                        handleResponse((JSON.parse(httpRequest.responseText)),searchTerm);
+
+                        //console.log(httpRequest.responseText);
+                    } else
+                    {
+                        // If the request failed, log an error message
+                        console.log("Error: " + httpRequest.status);
+                    }
+                }
+            };
+
+            // Build the URL for the AJAX request including Ajax token
+            const url = "searchBox.php?q=" + searchTerm + "&token=<?php echo $token; ?>";
+
+
+            // Open the AJAX request and sends it
+            httpRequest.open("GET", url, true);
+            httpRequest.send();
+        }
+    }
+
+    // Add an event listener to the search field to listen for keyup events
+    const searchField = document.getElementById("searchField");
+    searchField.addEventListener("keyup", handleKeyUp);
+
+
+</script>

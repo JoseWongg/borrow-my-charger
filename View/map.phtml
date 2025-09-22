@@ -1,0 +1,430 @@
+<div id="mapWrapper">
+    <div id="map" class="col-10" ></div>
+
+<?php include('geolocation.php'); ?>
+
+    <script>
+
+        let map;
+
+        //Connection to Leaflet API. Generates a map
+        function generateMap()
+        {
+            map = L.map('map').setView([51.505, -0.09], 13);
+
+           var streets= L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }).addTo(map);
+
+
+            // Add the satellite layer to the map
+            var satellite = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiandvbmdkIiwiYSI6ImNsZ2djdXUxbTBhaDQzcXJyeTVldjJqamMifQ.M7UQ58bXX4WM3hPfS1gEsg', {
+                maxZoom: 18,
+                id: 'mapbox.satellite',
+                tileSize: 512,
+                zoomOffset: -1
+            });
+
+            // Create a layer control object and add it to the map
+            var baseMaps = {
+                "Streets": streets,
+                "Satellite": satellite
+            };
+            L.control.layers(baseMaps).addTo(map);
+        }
+
+        //If user geolocation is available on load, it centers the map using the user's location
+        function centerMapToUser()
+        {
+            //get latitude and longitude from localStorage (chargerLister)
+            const latitude=localStorage.getItem('latitude');
+            const longitude=localStorage.getItem('longitude');
+
+            //Centers the map to given coordinates
+            if(latitude!=null & longitude!=null)
+            {
+                newLat=Number(latitude);
+                newLng=Number(longitude);
+                map.setView([newLat, newLng], 13);
+            }
+        }
+
+        //Retrieves chargers data from database
+        function fetchChargersData()
+        {
+            //Promise makes response available to other listening functions
+            return new Promise((resolve, reject) =>
+            {
+                //Ajax request using XMLHttpRequest
+                const httpRequest = new XMLHttpRequest();
+                httpRequest.onreadystatechange = function()
+                {
+                    if (httpRequest.readyState === 4)
+                    {
+                        if (httpRequest.status === 200)
+                        {
+                            resolve(JSON.parse(httpRequest.responseText));
+                        } else
+                        {
+                            reject("Error: " + httpRequest.status);
+                        }
+                    }
+                };
+
+                // Build the URL for the AJAX request including Ajax token
+                const url = "chargers.php?=" + "&token=<?php echo $token; ?>";
+
+                httpRequest.open("GET", url, true);
+                httpRequest.send();
+            });
+
+        }
+
+
+
+        //Retrieves users data from database
+        function fetchUsersData()
+        {
+            //Promise makes response available to other listening functions
+            return new Promise((resolve, reject) =>
+            {
+                //Ajax request using XMLHttpRequest
+                const httpRequest = new XMLHttpRequest();
+                httpRequest.onreadystatechange = function()
+                {
+                    if (httpRequest.readyState === 4)
+                    {
+                        if (httpRequest.status === 200)
+                        {
+                            resolve(JSON.parse(httpRequest.responseText));
+                        } else
+                        {
+                            reject("Error: " + httpRequest.status);
+                        }
+                    }
+                };
+
+                // Build the URL for the AJAX request including Ajax token
+                const url = "users.php?=" + "&token=<?php echo $token; ?>";
+
+                httpRequest.open("GET", url, true);
+                httpRequest.send();
+            });
+        }
+
+        //Retrieves searched chargers data from database
+        function fetchSearchedChargers(searchTerm)
+        {
+            //Promise makes response available to other listening functions
+            return new Promise((resolve, reject) =>
+            {
+                // Create a new AJAX httpRequest
+                const httpRequest = new XMLHttpRequest();
+                httpRequest.onreadystatechange = function()
+                {
+                    if (httpRequest.readyState === 4)
+                    {
+                        if (httpRequest.status === 200)
+                        {
+                            // If responseText is not empty, parse it to JSON format
+                            const response = JSON.parse(httpRequest.responseText);
+
+                            // Check if the response is null or empty
+                            if (response === null || response.length === 0)
+                            {
+                                // If the response is empty, set success to false
+                                resolve({ results: response, success: false });
+                            } else
+                            {
+                                // If the response is not empty, set success to true
+                                resolve({ results: response, success: true });
+                            }
+                        } else
+                        {
+                            reject("Error: " + httpRequest.status);
+                        }
+                    }
+                };
+
+                // Build the URL for the AJAX request including Ajax token
+                const url = "searchBox.php?q=" + searchTerm + "&token=<?php echo $token; ?>";
+
+                // Open the AJAX request and sends it
+                httpRequest.open("GET", url, true);
+                httpRequest.send();
+            })
+                .catch(error =>
+                {
+                    console.error(error);
+                });
+        }
+
+        //Creates markers and popups with all the entries in the database
+        function populateMap(chargersDataResponse)
+        {
+                //removes all previous map markers
+                map.eachLayer(function (layer)
+                {
+                    if (layer instanceof L.Marker)
+                    {
+                        map.removeLayer(layer);
+                    }
+                });
+
+                //Promise.all makes function only execute when responses with user and charger data are produced
+                Promise.all([chargersDataResponse, fetchUsersData()])
+                    .then(([chargersData, usersData]) =>
+                    {
+                        //console.log(chargersData);
+                        //console.log(usersData);
+
+                        // Generates a marker for each charge point
+                        let markers = chargersData.map(chargePoint => {
+                            let marker = L.marker([chargePoint.lat, chargePoint.lng]);
+
+
+                            // Add event listeners to show/hide popup on mouseover/mouseleave
+                            marker.on('mouseover', function (e) {
+                                this.openPopup();
+                            });
+
+                            marker.on('mouseleave', function (e) {
+                                this.closePopup();
+                            });
+
+                            // Find the user associated with the charge point
+                            let owner;
+                            for(var i=0; i<usersData.length; i++)
+                            {
+                                const user = usersData[i];
+                                if(user.userId==chargePoint.owner)
+                                {
+                                    owner=usersData[i]
+                                }
+                            }
+
+                            // Defines the owner image to be added the popup content
+                            let img = L.DomUtil.create('img', 'popup-image');
+                            img.src = owner.profilephoto;
+                            img.style.maxWidth = '50px';
+                            img.style.marginRight ='10px';
+                            img.style.marginBottom = '10px';
+
+                            // Create a div element to hold the popup content using DomUtil from Leaflet API
+                            let popupContent = L.DomUtil.create('div', 'popup-content');
+
+                            //Add the image to the <div>
+                            popupContent.appendChild(img);
+
+                            //Defines the popup text. Avoids displaying null when postcode not available
+                            var postcode=" ";
+                            if(chargePoint.postcode!=="" && chargePoint.postcode!=null)
+                            {
+                                postcode=chargePoint.postcode;
+
+                                popupContent.innerHTML += "<strong>Owner:</strong> " + owner.realname + "<br>"
+                                    + "<strong>Address:</strong> " + chargePoint.address1 + ", " + chargePoint.address2 + ", " + postcode+ "<br>"
+                                    + "<strong>Phone Number:</strong> " + owner.phonenumber + "<br>"
+                                    + "<strong>Cost:</strong> " + chargePoint.cost +"<br>";
+                            }else
+                            {
+                                popupContent.innerHTML += "<strong>Owner:</strong> " + owner.realname + "<br>"
+                                    + "<strong>Address:</strong> " + chargePoint.address1 + ", " + chargePoint.address2 + "<br>"
+                                    + "<strong>Phone Number:</strong> " + owner.phonenumber + "<br>"
+                                    + "<strong>Cost:</strong> " + chargePoint.cost +"<br>";
+                            }
+
+                            // Create a button element to open the book charger modal
+                            let btn = L.DomUtil.create('button');
+                            btn.classList.add('btn', 'btn-outline-danger', 'ms-2');
+                            btn.innerHTML = 'Book';
+                            btn.style.marginTop = '10px';
+
+                            // add a click event listener to the button
+                            L.DomEvent.addListener(btn, 'click', function()
+                            {
+                                //console.log('Button clicked!');
+                                var modal = document.getElementById('sendBookingRequest2');
+                                modal.classList.add('show');
+                                modal.style.display = 'block';
+                                var backdrop = document.createElement('div');
+                                backdrop.classList.add('modal-backdrop', 'fade', 'show');
+                                document.body.appendChild(backdrop);
+
+                                // add an event listener to close the modal when close button is clicked
+                                var closeBtn = modal.querySelector('.btn-close');
+                                L.DomEvent.addListener(closeBtn, 'click', function() {
+                                    modal.style.display = 'none';
+                                    modal.classList.remove('show');
+                                    backdrop.remove();
+                                });
+                            });
+
+                            // Add the button to the popup content
+                            popupContent.appendChild(btn);
+
+                            //Add the text to the popup content
+                            marker.bindPopup(popupContent);
+
+                            return marker;
+                        });
+
+                        // Adds the markers to the map and sets their popup content
+                        markers.forEach(marker =>
+                        {
+                            marker.addTo(map);
+                        });
+                    })
+
+                    .catch((error) =>
+                    {
+                        console.error(error);
+                    });
+        }
+
+
+        //Event handler for search button
+        document.getElementById("searchChargerButton2").addEventListener("click", function()
+        {
+            //Gets the searched term
+            var searchedTerm=document.getElementById('searchField').value;
+            //Console.log(searchedTerm);
+
+            //Request searched chargers data
+            if(searchedTerm!=null && searchedTerm!="")
+            {
+                fetchSearchedChargers(searchedTerm)
+                    .then(({ results, success }) =>
+                    {
+                        if (success)
+                        {
+                            //refocus the map to the first result
+                            console.log(results[0]);
+                            map.setView([results[0].lat, results[0].lng]);
+
+
+                            //Passes the data to populate map
+                            populateMap(results);
+                        } else
+                        {
+                            alert('No matches found!');
+                        }
+                    });
+
+                //Resets searchfield text
+                document.getElementById('searchField').value = "";
+            }else
+            {
+                //Alert shows when no search term entered
+                alert('Enter a city name or postcode for local results!');
+            }
+        });
+
+
+        //Event handler executes the functions above when page loads
+        window.onload = function()
+        {
+          generateMap();
+          centerMapToUser();
+
+          var chargers=fetchChargersData();
+          populateMap(chargers);
+        }
+
+    </script>
+
+</div>
+
+
+
+<!--Send Booking Request modal-->
+<div class="modal fade" id="sendBookingRequest2" tabindex="-1" aria-labelledby="sendBookingRequest" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Book Charger</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <label for="name" class="col-form-label">Name:</label>
+                        </div>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control" id="name" name="name">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <label for="start" class="col-form-label">Start:</label>
+                        </div>
+                        <div class="col-sm-8">
+                            <input type="datetime-local" class="form-control" id="start" name="start">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <label for="end" class="col-form-label">End:</label>
+                        </div>
+                        <div class="col-sm-8">
+                            <input type="datetime-local" class="form-control" id="end" name="end">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <label for="phone" class="col-form-label">Phone Number:</label>
+                        </div>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control" id="phone" name="phone">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <label for="email" class="col-form-label">Email:</label>
+                        </div>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control" id="email" name="email">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <input type="submit" class="btn btn-primary" name="sendRequest" value="send Request">
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    // Shows alert when send booking request button is clicked
+    const sendButton = document.querySelector('input[name="sendRequest"]');
+    sendButton.addEventListener('click', function(event)
+    {
+        event.preventDefault(); // Prevent the form from submitting
+        alert('Booking and payment functionalities coming soon!');
+    });
+</script>
+
+<script>
+
+    //Activate/deactivate relevant navbar buttons
+    document.addEventListener("DOMContentLoaded", function()
+    {
+        var mapSearchButton = document.getElementById("searchChargerButton2");
+        mapSearchButton.style.display = "inline-block";
+
+        var listSearchButton = document.getElementById("searchChargerButton");
+        listSearchButton.style.display = "none";
+
+        var showListButton = document.getElementById("showListButton");
+        showListButton.style.display = "inline-block";
+
+        var showMapButton = document.getElementById("showMapButton");
+        showMapButton.style.display = "none";
+    });
+
+</script>

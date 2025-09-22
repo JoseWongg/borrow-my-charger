@@ -1,0 +1,243 @@
+ <?php
+
+
+ //obtains permission to access user's location
+include 'geolocation.php';
+echo $view->location;
+
+ displayList();
+
+ function displayList()
+ {
+     require_once('Model/ChargePointDataSet.php');
+     $chargerDataSet = new ChargePointDataSet();
+     $_SESSION['allChargePoints'] = $chargerDataSet->fetchAllChargePoints();
+
+     //if search charger button clicked
+     if(isset($_POST['searchField']))
+     {
+         $city = $_POST['searchField'];
+         $_SESSION['foundChargers'] = $chargerDataSet->findByCityOrPostcode($city);
+         //if search term not entered
+         if ($city == '')
+         {
+             echo '<script>window.alert("Enter a city name or postcode for local results!")</script>';
+             displayAllChargers();
+         }else//if search term entered
+         {
+             $_SESSION['foundChargers']=$chargerDataSet->findByCityOrPostcode($city);
+
+             //if matches found
+             if(!empty($_SESSION['foundChargers']))
+             {
+
+                 echo'<div class="position-absolute top-300 w-100" style="top: 250px; overflow-y: scroll; overflow-x: hidden; height: calc(100vh - 270px);">
+                                        <div class="row">
+                                                <div class="col-3"></div>
+                                                     <div class="col-6">
+
+                                        <ul class="list-group" id="chargers" style="padding-left: 15px;"> 
+                                        ';
+
+                 foreach($_SESSION['foundChargers'] as $chargePoint)
+                 {
+                     $chargePointUserId= $chargePoint->getOwner();
+                     $userDataSet=new UserDataSet();
+                     $chargePointOwner =$userDataSet->fetchUserById($chargePointUserId);
+
+                     echo '<li class="list-group-item" xmlns="http://www.w3.org/1999/html">
+                                
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div id="Photo" class="flex-shrink-0 me-3">
+                                        <img class="img-thumbnail" src="' . $chargePointOwner[0]->getProfilephoto() . '" width="100px">
+                                    </div>
+        
+                                    <div id="Details" class="flex-grow-1 d-flex justify-content-center">
+                                        <div id="DetailsText" class="text-center">
+                                            <div class="col-12">Location: ' . $chargePoint->getAddress1() . ', ' . $chargePoint->getPostcode() . ', ' . $chargePoint->getAddress2() . '</div>
+                                            <div class="col-12">Owner: ' . $chargePointOwner[0]->getRealname() . '</div>
+                                            <div class="col-12">email: ' . $chargePointOwner[0]->getUsername() . '</div>
+                                            <div class="col-12">Price: ' . $chargePoint->getCost() . '</div>
+                                        </div>
+                                    </div>
+        
+                                    <div id="Button">
+                                        <form method="post" action="../chargerLister.php">
+                                            <div class="col-12 d-flex justify-content-end">
+                                                <a class="text-decoration-none text-black" aria-current="page" href="#" data-bs-toggle="modal" data-bs-target="#sendBookingRequest">
+                                                <input type="hidden" name="ownerId" value="' . $chargePointUserId . '">
+                                                <button type="submit" class="btn btn-outline-danger ms-2" name="bookCharger">Book</button>
+                                                </a>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </li>';
+
+                     echo'                </ul>
+                                      </div>
+                                <div class="col-4"></div>
+                           </div>
+                      </div>';
+
+                 }
+             }else //if matches not found
+             {
+                 echo '<script>window.alert("Match not found!")</script>';
+
+                 displayAllChargers();
+             }
+         }
+     }
+     else //if search charger button not clicked
+     {
+         displayAllChargers();
+     }
+ }
+
+
+
+ function displayAllChargers()
+ {
+     echo '<div class="position-absolute top-300 w-100" style="top: 250px; overflow-y: scroll; overflow-x: hidden; height: calc(100vh - 270px);">
+              <div class="row">
+                  <div class="col-3"></div>
+                  <div class="col-6">
+                      <ul class="list-group" id="chargers" style="padding-left: 15px;">';
+
+     foreach ($_SESSION['allChargePoints'] as $chargePoint) {
+         $chargePointUserId = $chargePoint->getOwner();
+         $userDataSet = new UserDataSet();
+         $chargePointOwner = $userDataSet->fetchUserById($chargePointUserId);
+
+         echo '<li class="list-group-item" xmlns="http://www.w3.org/1999/html">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div id="Photo" class="flex-shrink-0 me-3">
+                            <img class="img-thumbnail" src="' . $chargePointOwner[0]->getProfilephoto() . '" width="100px">
+                        </div>
+                        
+                        <div id="Details" class="flex-grow-1 d-flex justify-content-center">
+                            <div id="DetailsText" class="text-center">
+                                   <div class="col-12">Location: ' . $chargePoint->getAddress1() . ', ' . $chargePoint->getPostcode() . ', ' . $chargePoint->getAddress2() . '</div>
+                                   <div class="col-12">Owner: ' . $chargePointOwner[0]->getRealname() . '</div>
+                                   <div class="col-12">email: ' . $chargePointOwner[0]->getUsername() . '</div>
+                                   <div class="col-12">Price: ' . $chargePoint->getCost() . '</div>
+                            </div>
+                        </div>
+                        
+                        <div id="Button">
+                            <form method="post" action="../chargerLister.php">
+                                <div class="col-12 d-flex justify-content-end">
+                                    <a class="text-decoration-none text-black" aria-current="page" href="#" data-bs-toggle="modal" data-bs-target="#sendBookingRequest">
+                                        <input type="hidden" name="ownerId" value="' . $chargePointUserId . '">
+                                        <button type="submit" class="btn btn-outline-danger ms-2" name="bookCharger">Book</button>
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+              </li>
+              
+              ';
+
+     }
+
+     echo '           </ul>
+                  </div>
+                  <div class="col-3"></div>
+              </div>
+          </div>';
+ }
+
+
+ ?>
+
+<!--Send booking request modal-->
+ <div class="modal fade" id="sendBookingRequest" tabindex="-1" aria-labelledby="sendBookingRequest" aria-hidden="true">
+     <div class="modal-dialog">
+         <div class="modal-content">
+             <div class="modal-header">
+                 <h5 class="modal-title" id="exampleModalLabel">Book Charger</h5>
+                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+             </div>
+             <form>
+                 <div class="modal-body">
+                     <div class="row mb-3">
+                         <div class="col-sm-4">
+                             <label for="name" class="col-form-label">Name:</label>
+                         </div>
+                         <div class="col-sm-8">
+                             <input type="text" class="form-control" id="name" name="name">
+                         </div>
+                     </div>
+                     <div class="row mb-3">
+                         <div class="col-sm-4">
+                             <label for="start" class="col-form-label">Start:</label>
+                         </div>
+                         <div class="col-sm-8">
+                             <input type="datetime-local" class="form-control" id="start" name="start">
+                         </div>
+                     </div>
+                     <div class="row mb-3">
+                         <div class="col-sm-4">
+                             <label for="end" class="col-form-label">End:</label>
+                         </div>
+                         <div class="col-sm-8">
+                             <input type="datetime-local" class="form-control" id="end" name="end">
+                         </div>
+                     </div>
+                     <div class="row mb-3">
+                         <div class="col-sm-4">
+                             <label for="phone" class="col-form-label">Phone Number:</label>
+                         </div>
+                         <div class="col-sm-8">
+                             <input type="text" class="form-control" id="phone" name="phone">
+                         </div>
+                     </div>
+                     <div class="row mb-3">
+                         <div class="col-sm-4">
+                             <label for="email" class="col-form-label">Email:</label>
+                         </div>
+                         <div class="col-sm-8">
+                             <input type="text" class="form-control" id="email" name="email">
+                         </div>
+                     </div>
+                 </div>
+                 <div class="modal-footer">
+                     <input type="submit" class="btn btn-primary" name="sendRequest" value="send Request">
+                 </div>
+             </form>
+         </div>
+     </div>
+ </div>
+
+
+<script>
+
+    // Shows alert when send Request button is clicked in the modal
+    const sendButton = document.querySelector('input[name="sendRequest"]');
+    sendButton.addEventListener('click', function(event) {
+        event.preventDefault(); // Prevent the form from submitting
+        alert('Booking and payment functionalities coming soon!');
+    });
+
+
+
+
+    //Shows or hide relevant buttons in the navbar
+    document.addEventListener("DOMContentLoaded", function()
+    {
+        var mapSearchButton = document.getElementById("searchChargerButton2");
+        mapSearchButton.style.display = "none";
+
+        var listSearchButton = document.getElementById("searchChargerButton");
+        listSearchButton.style.display = "inline-block";
+
+        var showListButton = document.getElementById("showListButton");
+        showListButton.style.display = "none";
+
+        var showMapButton = document.getElementById("showMapButton");
+        showMapButton.style.display = "inline-block";
+    });
+
+</script>
